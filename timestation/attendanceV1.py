@@ -6,7 +6,11 @@ class Employee:
     def __init__(self, employee_id, name):
         self.employee_id = employee_id
         self.name = name
-
+        self.shifts ={}
+        
+    def add_shift(self, date, in_time, out_time, total_time):
+        self.shifts[date] = [in_time, out_time, total_time]
+        
 def list_employees(api_key):
     # API endpoint for listing employees
     url = "https://api.mytimestation.com/v1.2/employees"
@@ -30,6 +34,15 @@ def get_hours_worked_report(api_key, employees, start_date, end_date):
         hours = total_minutes // 60
         minutes = total_minutes % 60
         return f"{hours:02d}:{minutes:02d}"
+    
+    def convert_datetime_format(date_string):
+    # Parse the string into a datetime object
+        dt = datetime.strptime(date_string, "%Y-%m-%d %H:%M:%S")
+        
+        # Format the datetime object into the desired format
+        formatted_date = dt.strftime("%m/%d/%Y %H:%M")
+        
+        return formatted_date
 
     # Loop through each Employee object and fetch their shifts
     for employee in employees:
@@ -59,8 +72,15 @@ def get_hours_worked_report(api_key, employees, start_date, end_date):
                 out_time = next(iter(out_status.items()))[1] if in_status else 'N/A'
                 if in_time != 'N/A':
                     out_time = out_time[:-6]
+                # there's a better way to do this but this works
+                date =convert_datetime_format(in_time[:-9]+" "+in_time[11:])[:-6]
+                clockin = convert_datetime_format(in_time[:-9]+" "+in_time[11:])[11:]
+                clockout = convert_datetime_format(out_time[:-9]+" "+out_time[11:])[11:] 
                 
-                print(f" Shift - In: {in_time[:-9]} {in_time[11:]}, Out - {out_time[:-9]} {out_time[11:]}, Total Time: {formatted_time}")
+                employee.add_shift(date,clockin,clockout,formatted_time)
+                
+            for shift in employee.shifts:
+                print(shift, employee.shifts[shift])
         else:
             print(f"Failed to retrieve shifts for employee {employee.name}. Status code:", response.status_code)
 
