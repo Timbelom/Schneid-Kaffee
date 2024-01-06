@@ -19,7 +19,15 @@ This scrpit fetches employee shift records and moves the clock-in & -out times t
 
 * python3
 * pip
-* Requests library
-  ```
-  pip install requests
-  ```
+
+```
+pip install requests
+pip install openpyxl
+```
+
+
+### .xlsx stuff
+
+File names should contain employee name
+
+Sheet names need to be in **English acronyms** e.i Mar not Mrz.

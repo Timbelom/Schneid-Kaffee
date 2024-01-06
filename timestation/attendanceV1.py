@@ -1,6 +1,8 @@
 import requests
 from requests.auth import HTTPBasicAuth
-from datetime import datetime
+from datetime import datetime, timedelta
+import openpyxl
+import os
 
 class Employee:
     def __init__(self, employee_id, name):
@@ -72,6 +74,7 @@ def get_hours_worked_report(api_key, employees, start_date, end_date):
                 out_time = next(iter(out_status.items()))[1] if in_status else 'N/A'
                 if in_time != 'N/A':
                     out_time = out_time[:-6]
+                    
                 # there's a better way to do this but this works
                 date =convert_datetime_format(in_time[:-9]+" "+in_time[11:])[:-6]
                 clockin = convert_datetime_format(in_time[:-9]+" "+in_time[11:])[11:]
@@ -84,8 +87,106 @@ def get_hours_worked_report(api_key, employees, start_date, end_date):
         else:
             print(f"Failed to retrieve shifts for employee {employee.name}. Status code:", response.status_code)
 
+
+def fill_missing_dates(employee,start_date):
+    
+    def convert_datetime_format(date_string):
+    # Parse the string into a datetime object
+        dt = datetime.strptime(date_string, "%Y-%m-%d")
+        # Format the datetime object into the desired format
+        formatted_date = dt.strftime("%m/%d/%Y")
+        return formatted_date
+    
+    # Convert start and end dates to datetime objects
+    start = datetime.strptime(convert_datetime_format(start_date), "%m/%d/%Y")
+    end = datetime.strptime(max(employee.shifts.keys()), "%m/%d/%Y")
+
+    # Initialize a date variable with the start date
+    current_date = start
+
+    # Iterate over the range of dates
+    while current_date <= end:
+        # Format the current date as MM/DD/YYYY
+        date_str = current_date.strftime("%m/%d/%Y")
+
+        # If the date is not in the dictionary, add it with a default value
+        if date_str not in employee.shifts:
+            employee.shifts[date_str] = [0, 0, 0]
+
+        # Move to the next day
+        current_date += timedelta(days=1)
+    def sort_shift_data(shift_data):
+        # Sort the dictionary by date keys in ascending order
+        sorted_data = dict(sorted(shift_data.items(), key=lambda item: datetime.strptime(item[0], "%m/%d/%Y")))
+        return sorted_data
+    employee.shifts=sort_shift_data(employee.shifts)
+
+
+def find_and_open_excel_files(employee ,folder_path):
+    
+    def get_month_name(date_str):
+        # Parse the date string into a datetime object
+        date_obj = datetime.strptime(date_str, '%m/%d/%Y')
+
+        # Extract the month name and year
+        month_name = date_obj.strftime('%b')
+        year = date_obj.strftime('%y')
+
+        # Return the formatted string
+        return f"{month_name}.{year}"
+    # List all .xlsx files in the given folder
+    excel_files = [f for f in os.listdir(folder_path) if f.endswith('.xlsx')]
+
+    search_string = employee.name
+    
+    sheet_name = get_month_name(next(iter(employee.shifts)))
+
+    # Check each file to see if it contains the search string in its name
+    fileFound=False#Dumb perfectionism
+    for file in excel_files:
+        if search_string in file:
+            # Construct the full file path
+            file_path = os.path.join(folder_path, file)
+
+            # Open the workbook - add your logic here as needed
+            workbook = openpyxl.load_workbook(file_path)
+            if sheet_name not in workbook.sheetnames:
+                raise ValueError(f"Sheet '{sheet_name}' not found in the workbook.")
+            sheet = workbook[sheet_name]
+
+            # Start from row 7, column 3 (which is 'C7')
+            row = 7
+            date_column = 1
+            in_column = 2
+            out_column = 3
+
+            # Iterate over the data list and write to the cells
+            for shift in employee.shifts:
+                date_cell = sheet.cell(row=row, column=date_column)
+                date_cell.value = shift
+                in_cell = sheet.cell(row=row, column=in_column)
+                in_cell.value = employee.shifts[shift][0]
+                out_cell = sheet.cell(row=row, column=out_column)
+                out_cell.value = employee.shifts[shift][1]
+                row += 1  # Move to the next row
+
+            # Save the workbook
+            workbook.save(file_path)
+
+            # Example: Print the sheet names
+            print(f"Updated file for {employee.name}")
+            fileFound=True#Dumb perfectionism
+            break
+    if fileFound != True:
+        print(f"No file found for {employee.name}")
+
+
 # Main execution
 if __name__ == "__main__":
+    # dates=["1/24/2023","2/24/2023","3/24/2023","4/24/2023","5/24/2023","6/24/2023","7/24/2023","8/24/2023","9/24/2023","10/24/2023","11/24/2023","12/24/2023"]
+    # for i in dates:
+    #     print(get_month_name(i))
+    
     # API key 
     with open("timestation\\APIKEY.env", 'r') as file:
         api_key = file.read()
@@ -103,3 +204,8 @@ if __name__ == "__main__":
     # Get the hours worked report for each employee
     if employees:
         get_hours_worked_report(api_key, employees, start_date, end_date)
+        for employee in employees:
+            if employee.shifts:
+                fill_missing_dates(employee, start_date)
+                find_and_open_excel_files(employee, "timestation")
+        print("Success!")
