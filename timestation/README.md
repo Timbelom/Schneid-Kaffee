@@ -17,8 +17,9 @@ This scrpit fetches employee shift records and moves the clock-in & -out times t
 
 ### Requirements:
 
-```
-python3
-pip
-Requests library
-```
+* python3
+* pip
+* Requests library
+  ```
+  pip install requests
+  ```
