@@ -183,7 +183,7 @@ def find_and_open_excel_files(employee ,folder_path):
 # Main execution
 if __name__ == "__main__":
     
-    # API key 
+    # API key should be saved in a separate .env file stored locally
     with open("timestation\\APIKEY.env", 'r') as file:
         api_key = file.read()
 
