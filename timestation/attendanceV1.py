@@ -180,12 +180,8 @@ def find_and_open_excel_files(employee ,folder_path):
     if fileFound != True:
         print(f"No file found for {employee.name}")
 
-
 # Main execution
 if __name__ == "__main__":
-    # dates=["1/24/2023","2/24/2023","3/24/2023","4/24/2023","5/24/2023","6/24/2023","7/24/2023","8/24/2023","9/24/2023","10/24/2023","11/24/2023","12/24/2023"]
-    # for i in dates:
-    #     print(get_month_name(i))
     
     # API key 
     with open("timestation\\APIKEY.env", 'r') as file:
