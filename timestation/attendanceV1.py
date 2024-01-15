@@ -1,8 +1,12 @@
+import logging
 import requests
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
 import openpyxl
 import os
+
+logging.basicConfig(filename='errorlog.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 class Employee:
     def __init__(self, employee_id, name):
@@ -25,6 +29,7 @@ def list_employees(api_key):
         employees_data = response.json()
         return [Employee(employee['employee_id'], employee['name']) for employee in employees_data['employees']]
     else:
+        logging.error("Failed to retrieve employees. Status code: %s", response.status_code)
         print("Failed to retrieve employees. Status code:", response.status_code)
         return []
 
@@ -187,26 +192,28 @@ def find_and_open_excel_files(employee ,folder_path):
 
 # Main execution
 if __name__ == "__main__":
-    
-    # API key should be saved in a separate .env file stored locally
-    with open("APIKEY.env", 'r') as file:
-        api_key = file.read()
+    try:
+        # API key should be saved in a separate .env file stored locally
+        with open("APIKEY.env", 'r') as file:
+            api_key = file.read()
 
-    # Calculate the first day of the current month
-    today = datetime.now()
-    start_date = today.replace(day=1).strftime("%Y-%m-%d")
+        # Calculate the first day of the current month
+        today = datetime.now()
+        start_date = today.replace(day=1).strftime("%Y-%m-%d")
 
-    # End date is today's date
-    end_date = today.strftime("%Y-%m-%d")
+        # End date is today's date
+        end_date = today.strftime("%Y-%m-%d")
 
-    # Get the list of Employee objects
-    employees = list_employees(api_key)
+        # Get the list of Employee objects
+        employees = list_employees(api_key)
 
-    # Get the hours worked report for each employee
-    if employees:
-        get_hours_worked_report(api_key, employees, start_date, end_date)
-        for employee in employees:
-            if employee.shifts:
-                fill_missing_dates(employee, start_date)
-                find_and_open_excel_files(employee, "S:\\0_Schneid Kaffee Arbeitsraum\\6_Allgemeine Admin\\6.1_Stundenlisten Mitarbeiter\\2024")
-        print("Success!")
+        # Get the hours worked report for each employee
+        if employees:
+            get_hours_worked_report(api_key, employees, start_date, end_date)
+            for employee in employees:
+                if employee.shifts:
+                    fill_missing_dates(employee, start_date)
+                    find_and_open_excel_files(employee, "S:\\0_Schneid Kaffee Arbeitsraum\\6_Allgemeine Admin\\6.1_Stundenlisten Mitarbeiter\\2024")
+            print("Success!")
+    except Exception as e:
+        logging.exception("Unexpected error occurred: %s", str(e))
