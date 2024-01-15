@@ -40,5 +40,7 @@ Sheet names need to be in **English acronyms** e.i Mar not Mrz.
 ### troubleshooting
 
 Close all open instances of the .xlsx files
+
 Check APIKEY is correct
+
 Check folder paths are correct
