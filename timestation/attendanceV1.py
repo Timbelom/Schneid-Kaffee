@@ -62,8 +62,10 @@ def get_hours_worked_report(api_key, employees, start_date, end_date):
             shifts = response.json().get('shifts', [])
             for shift in shifts:
                 # Formating the dict data
+                
                 total_minutes = shift.get('total_minutes')
-                formatted_time = minutes_to_hhmm(int(total_minutes))
+                if total_minutes:
+                    formatted_time = minutes_to_hhmm(int(total_minutes))
                 
                 in_status = shift.get('in')
                 in_time = next(iter(in_status.items()))[1] if in_status else 'N/A'
@@ -71,16 +73,19 @@ def get_hours_worked_report(api_key, employees, start_date, end_date):
                     in_time = in_time[:-6]
                     
                 out_status = shift.get('out')
-                out_time = next(iter(out_status.items()))[1] if in_status else 'N/A'
-                if in_time != 'N/A':
-                    out_time = out_time[:-6]
+                if out_status:
+                    out_time = next(iter(out_status.items()))[1] if in_status else 'N/A'
+                    if out_time != 'N/A':
+                        out_time = out_time[:-6]
                     
                 # there's a better way to do this but this works
                 date =convert_datetime_format(in_time[:-9]+" "+in_time[11:])[:-6]
                 clockin = convert_datetime_format(in_time[:-9]+" "+in_time[11:])[11:]
-                clockout = convert_datetime_format(out_time[:-9]+" "+out_time[11:])[11:] 
-                
-                employee.add_shift(date,clockin,clockout,formatted_time)
+                if out_status:
+                    clockout = convert_datetime_format(out_time[:-9]+" "+out_time[11:])[11:] 
+                    employee.add_shift(date,clockin,clockout,formatted_time)
+                else:
+                    employee.add_shift(date,clockin,'N/A','N/A')
                 
             for shift in employee.shifts:
                 print(shift, employee.shifts[shift])
@@ -184,7 +189,7 @@ def find_and_open_excel_files(employee ,folder_path):
 if __name__ == "__main__":
     
     # API key should be saved in a separate .env file stored locally
-    with open("timestation\\APIKEY.env", 'r') as file:
+    with open("APIKEY.env", 'r') as file:
         api_key = file.read()
 
     # Calculate the first day of the current month
@@ -203,5 +208,5 @@ if __name__ == "__main__":
         for employee in employees:
             if employee.shifts:
                 fill_missing_dates(employee, start_date)
-                find_and_open_excel_files(employee, "timestation")
+                find_and_open_excel_files(employee, "S:\\0_Schneid Kaffee Arbeitsraum\\6_Allgemeine Admin\\6.1_Stundenlisten Mitarbeiter\\2024")
         print("Success!")
