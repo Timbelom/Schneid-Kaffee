@@ -44,3 +44,17 @@ Close all open instances of the .xlsx files
 Check APIKEY is correct
 
 Check folder paths are correct
+
+### cron command
+
+```
+0 7 * * * /usr/bin/python3 /path/to/your/script.py
+```
+
+### troubleshooting
+
+Close all open instances of the .xlsx files
+
+Check APIKEY is correct
+
+Check folder paths are correct
