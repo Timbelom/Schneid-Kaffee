@@ -25,9 +25,22 @@ pip install requests
 pip install openpyxl
 ```
 
-
 ### .xlsx stuff
 
 File names should contain employee name
 
 Sheet names need to be in **English acronyms** e.i Mar not Mrz.
+
+### cron command
+
+```
+0 7 * * * /usr/bin/python3 /path/to/your/script.py
+```
+
+### troubleshooting
+
+Close all open instances of the .xlsx files
+
+Check APIKEY is correct
+
+Check folder paths are correct
