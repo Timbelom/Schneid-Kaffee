@@ -299,11 +299,14 @@ if __name__ == "__main__":
         # Get the list of Employee objects
         employees = list_employees(api_key)
 
-    # Get the hours worked report for each employee
-    if employees:
-        get_hours_worked_report(api_key, employees, start_date, end_date)
-        for employee in employees:
-            if employee.shifts:
-                fill_missing_dates(employee, start_date)
-                find_and_open_excel_files(employee, "timestation")
-        print("Success!")
+        # Get the hours worked report for each employee
+        if employees:
+            get_hours_worked_report(api_key, employees, start_date, end_date)
+            for employee in employees:
+                if employee.shifts:
+                    fill_missing_dates(employee, start_date)
+                    find_and_open_excel_files(employee, "S:\\0_Schneid Kaffee Arbeitsraum\\6_Allgemeine Admin\\6.1_Stundenlisten Mitarbeiter\\2024")
+            print("Success!")
+            logging.info("Success!")
+    except Exception as e:
+        logging.exception("Unexpected error occurred: %s", str(e))
