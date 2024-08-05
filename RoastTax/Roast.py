@@ -1,21 +1,56 @@
 import pandas as pd
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
-from openpyxl.styles import colors
-from openpyxl.styles import Font, Color
-from openpyxl.styles import Border, Side, Alignment
+from openpyxl.styles import Font, Border, Side, Alignment
 from datetime import datetime
 import os
+from tkinter import Tk
+from tkinter.filedialog import askdirectory
+
+# Function to prompt the user to select a folder
+def select_folder():
+    root = Tk()
+    root.withdraw()  # Hide the root window
+    folder_selected = askdirectory()  # Open folder selection dialog
+    root.destroy()
+    return folder_selected
+
+# Function to sanitize sheet titles
+def sanitize_sheet_title(title):
+    invalid_chars = ['\\', '/', '*', '[', ']', ':', '?']
+    for char in invalid_chars:
+        title = title.replace(char, '_')
+    return title
+
+# Function to read roast names from a text file
+def read_roast_names(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        roast_names = [line.strip() for line in file if line.strip()]
+    return roast_names
+
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Path to the roast_names.txt file
+roast_names_file = os.path.join(script_dir, 'roast_names.txt')
+
+# Read roast names from the text file
+roast_names = read_roast_names(roast_names_file)
+
+# Prompt user to select a folder
+folder_path = select_folder()
+
+# Extract the name of the selected folder
+folder_name = os.path.basename(folder_path)
+
 # Initialize the Excel workbook
 wb = Workbook()
 wb.remove(wb.active)  # Remove the default sheet created
 
-# Define your file paths (assuming they are named as 'January 2024.xlsx', 'February 2024.xlsx', etc.)
-file_paths = ['2024/Januar 2024.xlsx', '2024/Februar 2024.xlsx', '2024/März 2024.xlsx', '2024/April 2024.xlsx', 
-              '2024/Mai 2024.xlsx', '2024/Juni 2024.xlsx', '2024/Juli 2024.xlsx', '2024/August 2024.xlsx', 
-              '2024/September 2024.xlsx', '2024/Oktober 2024.xlsx', '2024/November 2024.xlsx', '2024/Dezember 2024.xlsx']
-
-roast_names = ['LR MH','LR KEB', 'LR Fortezza', 'LR DKB', 'LR BM', 'LR JT', 'LR Kafrika', 'LR CS', 'BIO']
+# Define your file paths based on the selected folder and its name
+file_paths = [os.path.join(folder_path, f'{month} {folder_name}.xlsx') for month in [
+    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
+]]
 
 id = 1
 
@@ -53,7 +88,7 @@ for file_path in file_paths:
                 text = roast_title.split(':')[0]
 
             if date != last_date and last_date is not None:
-                new_rows[-1].update({'Rohk.': f"{weight_before_sum:.1f}", 'Röstk.': f"{weight_after_sum:.1f}"})
+                new_rows[-1].update({'Rohk.': weight_before_sum, 'Röstk.': weight_after_sum})
                 weight_before_sum = 0
                 weight_after_sum = 0
             
@@ -72,35 +107,33 @@ for file_path in file_paths:
                 'Datum': str(date),
                 'Name': name_found,
                 'Sorte': text,
-                'Rohk..': f"{weight_before:.1f}",
-                'Rohk.':'',
-                'Röstk..': f"{weight_after:.1f}",
-                'Röstk.':''
-            
+                'Rohk..': weight_before,
+                'Rohk.': '',
+                'Röstk..': weight_after,
+                'Röstk.': ''
             })
             id += 1
             monthly_before_sum_check += weight_before
             monthly_after_sum_check += weight_after
         if new_rows:
-            new_rows[-1].update({'Rohk.': f"{weight_before_sum:.1f}", 'Röstk.': f"{weight_after_sum:.1f}"})
-
+            new_rows[-1].update({'Rohk.': weight_before_sum, 'Röstk.': weight_after_sum})
 
         new_df = pd.DataFrame(new_rows)
-        title = file_path.replace('.xlsx', '').replace('2024/', '')
+        title = sanitize_sheet_title(os.path.splitext(os.path.basename(file_path))[0])
         ws = wb.create_sheet(title=title)  # Create a sheet named after the month
         ws.freeze_panes = 'A3' 
-    # Insert the total row at the top
+        # Insert the total row at the top
         ws.merge_cells('A1:C1')
         cell = ws['A1']
         cell.value = f'Röstbuch Schneid {title}'
         cell.alignment = Alignment(horizontal='center')
-        font=Font(size=12, bold=True)
-        cell.font=font
+        font = Font(size=12, bold=True)
+        cell.font = font
         ws['D1'] = 'Gesamt:'
-        ws['E1'] = f"{monthly_before_sum:.1f}"
-        ws['G1'] = f"{monthly_after_sum:.1f}"
-        ws['F1'] = f"{monthly_before_sum_check:.1f}"
-        ws['H1'] = f"{monthly_after_sum_check:.1f}"
+        ws['E1'] = monthly_before_sum
+        ws['G1'] = monthly_after_sum
+        ws['F1'] = monthly_before_sum_check
+        ws['H1'] = monthly_after_sum_check
 
         monthly_totals[title] = (monthly_before_sum, monthly_after_sum)
 
@@ -118,26 +151,34 @@ for file_path in file_paths:
                         ws.cell(row=rowIndex - 1, column=i).border = thin_border
                 if cell_value and isinstance(cell_value, str):
                     max_length[colIndex] = max(max_length.get(colIndex, 0), len(cell_value))
+                if colIndex in [5, 6, 7, 8] and cell_value != '':
+                    cell.number_format = '0.0'
 
         for i, width in max_length.items():
             ws.column_dimensions[get_column_letter(i)].width = width + 2
         print(f'Blatt für {title} populiert\n')
     else:
     # File does not exist
-        title = file_path.replace('.xlsx', '').replace('2024/', '')
+        title = sanitize_sheet_title(os.path.splitext(os.path.basename(file_path))[0])
         print(f"Datei für {title} kann nicht gefunden werden")
-summary_ws = wb.create_sheet(title="Röstk.Ges.2024", index=0)
+
+summary_ws = wb.create_sheet(title=sanitize_sheet_title(f"Röstk.Ges.{folder_name}"), index=0)
 summary_ws.append(["Monat", "Rohk", "Röstk"])
 
 max_length = [0, 0, 0]
 for month, totals in monthly_totals.items():
-    summary_ws.append([month, f"{totals[0]:.1f}", f"{totals[1]:.1f}"])
+    summary_ws.append([month, totals[0], totals[1]])
     max_length[0] = max(max_length[0], len(month))
     max_length[1] = max(max_length[1], len(str(totals[0])))
     max_length[2] = max(max_length[2], len(str(totals[1])))
 
 for i, width in enumerate(max_length, start=1):
     summary_ws.column_dimensions[get_column_letter(i)].width = width + 2
+
+for row in summary_ws.iter_rows(min_row=2, max_row=summary_ws.max_row, min_col=2, max_col=3):
+    for cell in row:
+        cell.number_format = '0.0'
+
 print('Zusammenfassungsblatt erstellt\n')
-wb.save('Röstbuch 2024 automatisiert.xlsx')
+wb.save(f'Röstbuch {folder_name}.xlsx')
 print('Erfolg!')
